@@ -89,6 +89,8 @@ td input,td select{padding:6px;font-size:13px}
 <section id="s0">
  <div class="card"><p class="hd">Seller details</p><div class="g" id="f-seller"></div>
  <div class="logo-row"><div><label for="logo">Logo (shown at the top of the invoice)</label><input id="logo" type="file" accept="image/*"></div><div id="logoui"></div></div>
+ <div class="logo-row"><div><label for="sign">Signature (PNG, shown at the bottom)</label><input id="sign" type="file" accept="image/png,image/*"></div><div id="signui"></div></div>
+ <div class="logo-row"><div><label for="seal">Seal (PNG, shown next to the signature)</label><input id="seal" type="file" accept="image/png,image/*"></div><div id="sealui"></div></div>
  <div class="chips" id="c-seller"></div>
  <div style="margin-top:12px"><button id="save-seller">Save seller</button></div></div>
  <div class="nav"><span></span><button class="p" data-go="1">Next: buyer</button></div>
@@ -207,14 +209,18 @@ $("inv").innerHTML=
 '<div class="tot">'+totals()+'</div><div class="words">'+wd()+'</div>'+
 '<div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:18px">'+
 (S.showBank&&(bk.acc||bk.bank)?'<div><div class="mut">Bank details</div><div>'+ln(bk,["holder","bank"])+(bk.acc?'<br>A/c no. '+esc(bk.acc):'')+(bk.ifsc?'<br>IFSC '+esc(bk.ifsc):'')+'</div></div>':'<div></div>')+
-'<div style="text-align:right;align-self:flex-end"><div class="mut">For '+esc(s.name)+'</div><div style="height:40px"></div><div class="mut">Authorised signatory</div></div></div>'}
+'<div style="text-align:right;align-self:flex-end">'+sigHtml(s)+'<div class="mut">Authorised signatory</div></div></div>'}
 
 function logoUI(){var l=S.cur.seller.logo;$("logoui").innerHTML=l?'<img src="'+l+'" alt="Logo preview"><button id="logo-rm">Remove logo</button>':'<span class="mut">No logo added</span>'}
 $("logo").onchange=function(){var f=this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var m=Math.min(1,400/im.width,160/im.height),c=document.createElement("canvas");c.width=Math.max(1,Math.round(im.width*m));c.height=Math.max(1,Math.round(im.height*m));c.getContext("2d").drawImage(im,0,0,c.width,c.height);S.cur.seller.logo=c.toDataURL("image/png");save();logoUI();chips("seller")};im.src=r.result};r.readAsDataURL(f);this.value=""};
+function signUI(){var s=S.cur.seller;[["sign","signui","Signature"],["seal","sealui","Seal"]].forEach(function(x){$(x[1]).innerHTML=s[x[0]]?'<img src="'+s[x[0]]+'" alt="'+x[2]+' preview"><button id="'+x[0]+'-rm">Remove</button>':'<span class="mut">No '+x[2].toLowerCase()+' added</span>'})}
+function up(id,key,mw,mh){$(id).onchange=function(){var f=this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var m=Math.min(1,mw/im.width,mh/im.height),c=document.createElement("canvas");c.width=Math.max(1,Math.round(im.width*m));c.height=Math.max(1,Math.round(im.height*m));c.getContext("2d").drawImage(im,0,0,c.width,c.height);S.cur.seller[key]=c.toDataURL("image/png");save();signUI();chips("seller")};im.src=r.result};r.readAsDataURL(f);this.value=""}}
+up("sign","sign",300,120);up("seal","seal",240,240);
+function sigHtml(s){var a=(s.seal?'<img src="'+s.seal+'" alt="Seal" style="max-height:80px;max-width:110px">':'')+(s.sign?'<img src="'+s.sign+'" alt="Signature" style="max-height:60px;max-width:150px">':'');return a?'<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:6px 0">'+a+'</div>':'<div style="height:40px"></div>'}
 function inc(n){n=String(n||"INV-001");return /\d/.test(n)?n.replace(/(\d+)(\D*)$/,function(m,d,r){return String(+d+1).padStart(d.length,"0")+r}):n+"-2"}
 function snap(){return JSON.parse(JSON.stringify({cur:S.cur,items:S.items,hsn:S.hsn,showBank:S.showBank,no:S.no,date:S.date}))}
 function saveInv(){var o={no:S.no,date:S.date,buyer:S.cur.buyer.name||"",total:Math.round(calc().tot*100)/100,at:Date.now(),snap:snap()},ix=-1;S.hist.forEach(function(h,i){if(h.no==o.no)ix=i});if(ix>=0)S.hist[ix]=o;else S.hist.unshift(o);save();$("msg").textContent="Saved to Invoices"}
-function sync(){["seller","buyer","bank"].forEach(function(k){fill(k);chips(k)});$("no").value=S.no;$("dt").value=S.date;$("hsn").checked=S.hsn;$("showbank").checked=S.showBank;$("bankbox").style.display=S.showBank?"block":"none";logoUI();items()}
+function sync(){["seller","buyer","bank"].forEach(function(k){fill(k);chips(k)});$("no").value=S.no;$("dt").value=S.date;$("hsn").checked=S.hsn;$("showbank").checked=S.showBank;$("bankbox").style.display=S.showBank?"block":"none";logoUI();signUI();items()}
 function loadInv(i,to){var s=JSON.parse(JSON.stringify(S.hist[i].snap));S.cur=s.cur;S.items=s.items;S.hsn=s.hsn;S.showBank=s.showBank;S.no=s.no;S.date=s.date;save();sync();go(to)}
 function hist(){
 $("hist").innerHTML=S.hist.length?S.hist.map(function(h,i){return '<div class="card"><div class="row"><div><b>'+esc(h.no)+'</b> <span class="mut">'+fd(h.date)+'</span><div>'+esc(h.buyer||"No buyer name")+'</div></div><div style="font-weight:700;font-size:16px">'+fm(h.total)+'</div></div><div class="acts"><button data-open="'+i+'">View</button><button data-edit="'+i+'">Edit</button><button data-delh="'+i+'">Delete</button></div></div>'}).join(""):'<div class="card"><p class="hd">No invoices yet</p><p class="mut" style="margin:0">Create an invoice, open the preview, and choose Save invoice. It will appear here.</p></div>'}
@@ -258,6 +264,7 @@ else if(d.edit!=null)loadInv(+d.edit,2)
 else if(d.delh!=null){if(confirm("Delete this invoice?")){S.hist.splice(+d.delh,1);save();hist()}}
 else if(d.newinv)newInv()
 else if(t.id=="logo-rm"){delete S.cur.seller.logo;save();logoUI();chips("seller")}
+else if(t.id=="sign-rm"||t.id=="seal-rm"){delete S.cur.seller[t.id.slice(0,4)];save();signUI();chips("seller")}
 else if(t.id=="saveinv")saveInv()
 else if(t.id&&t.id.indexOf("save-")==0)saveParty(t.id.slice(5))});
 $("add").onclick=function(){S.items.push({n:"",h:"",q:1,p:0,c:9,s:9});save();items()};
@@ -265,7 +272,7 @@ $("print").onclick=function(){saveInv();window.print()};
 
 ["seller","buyer","bank"].forEach(build);
 $("no").value=S.no;$("dt").value=S.date;$("hsn").checked=S.hsn;$("showbank").checked=S.showBank;$("bankbox").style.display=S.showBank?"block":"none";
-logoUI();items();go(0);
+logoUI();signUI();items();go(0);
 })();
 </script>
 </body>
